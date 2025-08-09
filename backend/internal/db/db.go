@@ -1,17 +1,18 @@
 package db
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
+	"github.com/vprates-22/pratesBet/internal/models"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-var DB *sql.DB
+var DB *gorm.DB
 
-func Dsn() (string, error) {
+func buildDsn() (string, error) {
 	var dsn string
 	var err error
 
@@ -42,16 +43,36 @@ func Dsn() (string, error) {
 	return dsn, err
 }
 
+func migrateDB(db *gorm.DB) error {
+	return db.AutoMigrate(
+		&models.User{},
+		&models.Group{},
+		&models.Permission{},
+		&models.GroupPermission{},
+		&models.Person{},
+		&models.Address{},
+		&models.State{},
+		&models.Country{},
+		&models.Configuration{},
+		&models.Language{},
+	)
+}
+
 func New() error {
 	var dsn string
 	var err error
 
-	dsn, err = Dsn()
+	dsn, err = buildDsn()
 	if err != nil {
 		return err
 	}
 
-	DB, err = sql.Open("postgres", dsn)
+	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+
+	err = migrateDB(DB)
 	if err != nil {
 		return err
 	}
